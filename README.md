@@ -33,28 +33,28 @@ Waveforms all take two basic arguments when generated:
 ```
 Wave(amplitude, static)
 ```
-- `amplitude`: the waveform's amplitude;
+- `amplitude`: the waveform's amplitude. Default is 512;
 - `static`
 
 Available waveforms are:
 - `Square(amplitude, duty, static)`
 	- `duty`: the square wave's duty cycle. Can be either a float or another waveform or `Instrument`. Default is 0.5.
 - `Sawtooth(amplitude, width, static)`
-	- `width`: width of the rising ramp as a proportion of the total cycle of the sawtooth wave.
+	- `width`: width of the rising ramp as a proportion of the total cycle of the sawtooth wave. Default is 1.
 - `Noise(amplitude, static)`
 ## Effects
 ### Post processing effects
 - `Envelope(attack, decay, sustain, static)`
 	- `attack`: sets the time it takes for the signal to rise from an amplitude of 0 to full amplitude. Default is 0.
-	- `decay`: sets the time it takes for the signal to fall from full amplitude to the sustain level.
-	- `sustain`: sets the amplitude of the wave for the time the key is held.
+	- `decay`: sets the time it takes for the signal to fall from full amplitude to the sustain level. Default is 0.
+	- `sustain`: sets the amplitude of the wave for the time the key is held. Default is 1.
 ### Pre processing effects
 - `Vibrato(osc, amount, static)`
 	- `osc`: sets the rate at which the frequency oscillates. Default is 0.25.
 	- `amount`: sets the amount of variation of frequency. Default is 1.
 - `FreqSweep(toFreq, time)`
-	- `toFreq`: the destination frequency.
-	- `time`: the amount of time in which the wave's frequency should reach the destination frequency.
+	- `toFreq`: the destination frequency. Default is 440.
+	- `time`: the amount of time (in milliseconds) in which the wave's frequency should reach the destination frequency. Default is 1.
 # The language and the Python API
 NOTE: The compiler will ignore any tabs or newlines. Spaces however make a difference in syntax, unless they're inside brackets.
 ## Statements
@@ -100,7 +100,7 @@ Statements are not case sensitive.
 	- `velocity`: relative volume of the note. Can be anywhere in the range 0-512. Default is 512.
 	- `delay`: amount of time (in seconds) to wait after the note started playing. Default is 0.
 	- `volumes`: a tuple containing the relative volumes of the left and right channels. The values can be anywhere in the range 0-1. Default is (1, 1).
-	- `release`: sets the time it takes for the sound to decay from the sustain level to an amplitude of 0 when the key is released.
+	- `release`: sets the time it takes for the sound to decay from the sustain level to an amplitude of 0 when the key is released. Default is 0.
 - Example:
 	```
 	NOTE C4 CHANNEL 2 ON USING myInstrument WITH (
