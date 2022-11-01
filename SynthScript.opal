@@ -197,8 +197,8 @@ new class Synth {
                     
                     if this.mode in (Synth.EXPORT, Synth.RENDER) {
                         this.eventList.append([
-                            Synth.EventType.NOTE, new_, channel, this.eventList[this.playing[frequency][i]][2], 
-                            this.eventList[this.playing[frequency][i]][3], 0, this.__time
+                            Synth.EventType.NOTE, new_, channel, this.eventList[this.playing[frequency][i]][3], 
+                            this.eventList[this.playing[frequency][i]][4], 0, this.__time
                         ]);
 
                         this.playing[frequency][i] = len(this.eventList) - 1;
