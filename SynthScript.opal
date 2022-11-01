@@ -29,13 +29,21 @@ $include os.path.join("HOME_DIR", "components", "Instrument.opal")
 $include os.path.join("HOME_DIR", "components", "Process.opal")
 
 new class Synth {
+    enum {
+        REALTIME, RENDER, EXPORT
+    }
+
+    enum EventType {
+        NOTE, PLAYBACK
+    }
+
     new dynamic SAMPLE;
     SAMPLE = 2 * numpy.pi * numpy.arange(0, NOTE_DURATION, NOTE_DURATION / FREQUENCY_SAMPLE);
 
     new method __init__() {
         this.playing = {};
     
-        this.export = False;
+        this.mode = Synth.RENDER;
 
         this.eventList = None;
         this.__time    = 0;
@@ -65,13 +73,29 @@ new class Synth {
 
     new method play(playable, times = 1, blocking = True, volumes = (1.0, 1.0)) {
         if type(playable) is Sound {
-            new dynamic ch = this.getFreeSoundChannel();
+            if this.mode == Synth.REALTIME {
+                new dynamic ch = this.getFreeSoundChannel();
 
-            ch.play(playable, times - 1);
-            ch.set_volume(*volumes);
+                ch.play(playable, times - 1);
+                ch.set_volume(*volumes);
 
-            if blocking {
-                while ch.get_busy() {}
+                if blocking {
+                    while ch.get_busy() {}
+                }
+            } else {
+                new dynamic array = sndarray.array(playable), delay;
+
+                if blocking {
+                    delay = len(array) / FREQUENCY_SAMPLE;
+                } else {
+                    delay = 0;
+                }
+
+                this.eventList.append([
+                    Synth.EventType.PLAYBACK, array, delay, this.__time
+                ]);
+
+                this.__time += delay;
             }
         } else {
             if blocking {
@@ -99,7 +123,7 @@ new class Synth {
     new method __addTime(time) {
         for freqs in this.playing.values() {
             for freq in freqs {
-                this.eventList[freq][4] += time;
+                this.eventList[freq][5] += time;
             }
         }
     }
@@ -111,7 +135,7 @@ new class Synth {
             instrument = this.defaultInstrument;
         }
 
-        if this.export {
+        if this.mode in (Synth.EXPORT, Synth.RENDER) {
             if status {
                 this.__addTime(delay);
 
@@ -122,14 +146,14 @@ new class Synth {
                 }
 
                 this.eventList.append([
-                    frequency, channel, velocity, instrument, delay, this.__time
+                    Synth.EventType.NOTE, frequency, channel, velocity, instrument, delay, this.__time
                 ]);
             } else {
                 this.playing[pair].pop();
 
                 if delay != 0 and len(this.eventList) != 0 {
                     this.__addTime(delay);
-                    this.eventList[-1][4] += delay;
+                    this.eventList[-1][5] += delay;
                 }
             }
 
@@ -171,9 +195,9 @@ new class Synth {
                 for i in range(len(this.playing[frequency])) {
                     new dynamic new_ = frequency[0] * (2 ** (BEND_OCTAVES * (amount / 8192))), vol, sound, ch;
                     
-                    if this.export {
+                    if this.mode in (Synth.EXPORT, Synth.RENDER) {
                         this.eventList.append([
-                            new_, channel, this.eventList[this.playing[frequency][i]][2], 
+                            Synth.EventType.NOTE, new_, channel, this.eventList[this.playing[frequency][i]][2], 
                             this.eventList[this.playing[frequency][i]][3], 0, this.__time
                         ]);
 
@@ -204,7 +228,7 @@ new class Synth {
         }
     }
 
-    new method exportTracks(source) {
+    new method render(source) {
         global FREQUENCY_SAMPLE;
         
         FREQUENCY_SAMPLE = RENDER_FREQ_SAMPLE;
@@ -219,10 +243,10 @@ new class Synth {
         new dynamic tracks = [];
         for ch in range(CHANNELS) {
             for i = len(this.eventList) - 1; i >= 0; i-- {
-                if this.eventList[i][1] == ch {
+                if this.eventList[i][2] == ch {
                     tracks.append(
                         numpy.zeros(
-                            ceil((this.eventList[i][5] + this.eventList[i][4]) * FREQUENCY_SAMPLE),
+                            ceil((this.eventList[i][6] + this.eventList[i][5]) * FREQUENCY_SAMPLE),
                             dtype = numpy.int16
                         )
                     );
@@ -234,56 +258,122 @@ new class Synth {
             }
         }
 
+        for i = len(this.eventList) - 1; i >= 0; i-- {
+            if this.eventList[i][0] == Synth.EventType.PLAYBACK {
+                tracks.append(
+                    numpy.zeros(
+                        ceil((this.eventList[i][2] + this.eventList[i][3]) * FREQUENCY_SAMPLE),
+                        dtype = numpy.int16
+                    )
+                );
+
+                break;
+            }
+        } else {
+            tracks.append(numpy.zeros(0, dtype = numpy.int16));
+        }
+
         IO.out("Generating waves...\n");
         for event in this.eventList {
-            Synth.SAMPLE = 2 * numpy.pi * numpy.arange(0, event[4], 1 / FREQUENCY_SAMPLE);
+            if event[0] == Synth.EventType.NOTE {
+                Synth.SAMPLE = 2 * numpy.pi * numpy.arange(0, event[5], 1 / FREQUENCY_SAMPLE);
 
-            new dynamic length = int(event[5] * FREQUENCY_SAMPLE),
-                        cLen   = len(tracks[event[1]]) - length - len(Synth.SAMPLE);
+                new dynamic length = int(event[6] * FREQUENCY_SAMPLE),
+                            cLen   = len(tracks[event[2]]) - length - len(Synth.SAMPLE);
 
-            if cLen < 0 {
-                cLen = 0;
+                if cLen < 0 {
+                    cLen = 0;
+                }
+
+                event[4]._noStatic();
+
+                tracks[event[2]] += numpy.resize(
+                    numpy.concatenate((
+                        numpy.zeros(length, dtype = numpy.int16),
+                        (event[3] * event[4].get(event[1])).astype(numpy.int16),
+                        numpy.zeros(cLen, dtype = numpy.int16)
+                    )), len(tracks[event[2]])
+                );
+            } else {
+                new dynamic length = int(event[3] * FREQUENCY_SAMPLE),
+                            cLen   = len(tracks[-1]) - length - len(event[1]);
+
+                tracks[-1] += numpy.resize(
+                    numpy.concatenate((
+                        numpy.zeros(length, dtype = numpy.int16),
+                        event[1].astype(numpy.int16),
+                        numpy.zeros(cLen, dtype = numpy.int16)
+                    )), len(tracks[-1])
+                );
+            }
+        }
+
+        if this.mode == Synth.EXPORT {
+            IO.out("Writing files...\n");;
+            if not path.exists("tracks") {
+                mkdir("tracks");
             }
 
-            event[3]._noStatic();
+            for i in range(len(tracks) - 1) {
+                if len(tracks[i]) != 0 {
+                    wavfile.write(path.join("tracks", str(i) + ".wav"), FREQUENCY_SAMPLE, tracks[i]);
+                }
+            }
 
-            tracks[event[1]] += numpy.resize(
-                numpy.concatenate((
-                    numpy.zeros(length, dtype = numpy.int16),
-                    (event[2] * event[3].get(event[0])).astype(numpy.int16),
-                    numpy.zeros(cLen, dtype = numpy.int16)
-                )), len(tracks[event[1]])
-            );
-        }
+            if len(tracks[-1]) != 0 {
+                wavfile.write(path.join("tracks", "playbackTrack.wav"), FREQUENCY_SAMPLE, tracks[-1]);
+            }
 
-        IO.out("Writing files...\n");;
-        if not path.exists("tracks") {
-            mkdir("tracks");
-        }
-
-        for i in range(len(tracks)) {
-            wavfile.write(path.join("tracks", str(i) + ".wav"), FREQUENCY_SAMPLE, tracks[i]);
-        }
-    }
-
-    new method playCompiled(source) {
-        if this.export {
-            this.exportTracks(source);
             return;
         }
 
-        mixer.init(FREQUENCY_SAMPLE);
-        mixer.set_num_channels(NOTES_PER_CHANNEL * CHANNELS + SOUND_CHANNELS);
+        IO.out("Mixing tracks...\n");
+        
+        new dynamic maxLen    = max(len(x) for x in tracks);
+        tracks[0].resize(maxLen);
+        new dynamic fullTrack = tracks[0];
 
-        this.channels = [
-            [mixer.Channel(NOTES_PER_CHANNEL * j + i) 
-            for i in range(NOTES_PER_CHANNEL)] 
-            for j in range(CHANNELS)
-        ];
+        for i = 1; i < len(tracks); i++ {
+            tracks[i].resize(maxLen);
+            fullTrack += tracks[i];
+        }
 
-        this.soundChannels = [
-            mixer.Channel(NOTES_PER_CHANNEL * CHANNELS + i) for i in range(SOUND_CHANNELS)
-        ];
+        return fullTrack;
+    }
+
+    new method playCompiled(source) {
+        match this.mode {
+            case Synth.EXPORT {
+                this.render(source);
+                return;
+            }
+            case Synth.REALTIME {
+                mixer.init(FREQUENCY_SAMPLE);
+                mixer.set_num_channels(NOTES_PER_CHANNEL * CHANNELS + SOUND_CHANNELS);
+
+                this.channels = [
+                    [mixer.Channel(NOTES_PER_CHANNEL * j + i) 
+                    for i in range(NOTES_PER_CHANNEL)] 
+                    for j in range(CHANNELS)
+                ];
+
+                this.soundChannels = [
+                    mixer.Channel(NOTES_PER_CHANNEL * CHANNELS + i) for i in range(SOUND_CHANNELS)
+                ];
+
+                new dynamic synth = this;
+                exec(source);
+            }
+            case Synth.RENDER {
+                mixer.init(RENDER_FREQ_SAMPLE, channels = 1);
+
+                this.soundChannels = [mixer.Channel(0)];
+
+                new dynamic soundtrack = this.render(source);
+                this.mode = Synth.REALTIME;
+                this.play(sndarray.make_sound(soundtrack));
+            }
+        }
     }
 }
 
@@ -301,8 +391,13 @@ main {
         new dynamic synth = Synth();
 
         if "--export-tracks" in argv {
-            synth.export = True;
+            synth.mode = Synth.EXPORT;
             argv.remove("--export-tracks");
+        }
+
+        if "--realtime" in argv {
+            synth.mode = Synth.REALTIME;
+            argv.remove("--realtime");
         }
 
         if len(argv) == 1 {
@@ -320,9 +415,5 @@ main {
         }
 
         synth.playCompiled(source);
-
-        if not synth.export {
-            exec(source);
-        }
     }
 }
