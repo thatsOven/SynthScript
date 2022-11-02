@@ -44,7 +44,7 @@ new class Envelope : Effect {
         new dynamic attackAmt, decayAmt, releaseAmt, sustSize;
         attackAmt  = int((this.attack / 1000) * FREQUENCY_SAMPLE);
         decayAmt   = int((this.decay  / 1000) * FREQUENCY_SAMPLE);
-        releaseAmt = int((this.release) / 1000) * FREQUENCY_SAMPLE);
+        releaseAmt = int((this.release / 1000) * FREQUENCY_SAMPLE);
 
         sustSize = len(Synth.SAMPLE) - attackAmt - decayAmt - releaseAmt;
         if sustSize < 0 {
