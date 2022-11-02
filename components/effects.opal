@@ -31,20 +31,22 @@ abstract: new class Effect {
 }
 
 new class Envelope : Effect {
-    new method __init__(attack = 0, decay = 0, sustain = 1, static = False) {
+    new method __init__(attack = 0, decay = 0, sustain = 1, release = 0, static = False) {
         this.attack  = attack;
         this.decay   = decay;
         this.sustain = sustain;
+        this.release = release;
 
         super().__init__(static);
     }
 
     new method _compute() {
-        new dynamic attackAmt, decayAmt, sustSize;
-        attackAmt = int((this.attack / 1000) * FREQUENCY_SAMPLE);
-        decayAmt  = int((this.decay  / 1000) * FREQUENCY_SAMPLE);
+        new dynamic attackAmt, decayAmt, releaseAmt, sustSize;
+        attackAmt  = int((this.attack / 1000) * FREQUENCY_SAMPLE);
+        decayAmt   = int((this.decay  / 1000) * FREQUENCY_SAMPLE);
+        releaseAmt = int((this.release) / 1000) * FREQUENCY_SAMPLE);
 
-        sustSize = len(Synth.SAMPLE) - attackAmt - decayAmt;
+        sustSize = len(Synth.SAMPLE) - attackAmt - decayAmt - releaseAmt;
         if sustSize < 0 {
             sustSize = 0;
         }
@@ -53,7 +55,8 @@ new class Envelope : Effect {
             numpy.concatenate((
                 numpy.linspace(0,            1, attackAmt, dtype = float),
                 numpy.linspace(1, this.sustain,  decayAmt, dtype = float),
-                numpy.full(sustSize, this.sustain, dtype = float)
+                numpy.full(sustSize, this.sustain, dtype = float),
+                numpy.linspace(this.sustain, 0, releaseAmt, dtype = float)
             )), len(Synth.SAMPLE)
         );
     }

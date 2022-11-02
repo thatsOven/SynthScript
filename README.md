@@ -51,6 +51,7 @@ Available waveforms are:
 	- `attack`: sets the time it takes for the signal to rise from an amplitude of 0 to full amplitude. Default is 0.
 	- `decay`: sets the time it takes for the signal to fall from full amplitude to the sustain level.
 	- `sustain`: sets the amplitude of the wave for the time the key is held.
+	- `release`: sets the time it takes for the sound to decay from the sustain level to an amplitude of 0 when the key is released.
 ### Pre processing effects
 - `Vibrato(osc, amount, static)`
 	- `osc`: sets the rate at which the frequency oscillates. Default is 0.25.
@@ -102,8 +103,6 @@ Statements are not case sensitive.
 - Optionally, a `WITH` clause can be added to pass arguments to the `note` method:
 	- `velocity`: relative volume of the note. Can be anywhere in the range 0-512. Default is 512.
 	- `delay`: amount of time (in seconds) to wait after the note started playing. Default is 0.
-	- `volumes`: a tuple containing the relative volumes of the left and right channels. The values can be anywhere in the range 0-1. Default is (1, 1).
-	- `release`: sets the time it takes for the sound to decay from the sustain level to an amplitude of 0 when the key is released.
 - Example:
 	```
 	NOTE C4 CHANNEL 2 ON USING myInstrument WITH (
@@ -180,7 +179,6 @@ Statements are not case sensitive.
 - Optionally, a `WITH` clause can be added to pass arguments to the `play` method:
 	- `times`: amount of times the object will be played. Default is 1.
 	- `blocking`: sets whether the method should wait until the end of the playback (True) or not (False). Default is True.
-	- `volumes`: a tuple containing the relative volumes of the left and right channels. The values can be anywhere in the range 0-1. Default is (1, 1).
 	- Example:
 	```
 	PLAY shortNote WITH (

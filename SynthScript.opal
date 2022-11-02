@@ -71,13 +71,12 @@ new class Synth {
         return this.soundChannels[0];
     }
 
-    new method play(playable, times = 1, blocking = True, volumes = (1.0, 1.0)) {
+    new method play(playable, times = 1, blocking = True) {
         if type(playable) is Sound {
             if this.mode == Synth.REALTIME {
                 new dynamic ch = this.getFreeSoundChannel();
 
                 ch.play(playable, times - 1);
-                ch.set_volume(*volumes);
 
                 if blocking {
                     while ch.get_busy() {}
@@ -128,7 +127,7 @@ new class Synth {
         }
     }
 
-    new method note(frequency, channel, status, instrument = None, velocity = MAX_AMP, delay = 0, volumes = (1.0, 1.0), release = 0) {
+    new method note(frequency, channel, status, instrument = None, velocity = MAX_AMP, delay = 0) {
         new dynamic pair = (frequency, channel), ch;
 
         if instrument is None {
@@ -165,9 +164,9 @@ new class Synth {
             ch = this.getFreeNote(channel);
 
             if pair in this.playing {
-                this.playing[pair].append((ch, velocity, instrument, volumes));
+                this.playing[pair].append((ch, velocity, instrument));
             } else {
-                this.playing[pair] = [(ch, velocity, instrument, volumes)];
+                this.playing[pair] = [(ch, velocity, instrument)];
             }
 
             ch = this.channels[channel][ch];
@@ -178,10 +177,9 @@ new class Synth {
                     ).reshape((-1, 2)).astype(numpy.int16)
                 ), -1
             );
-            ch.set_volume(*volumes);
         } else {
             ch = this.playing[pair].pop()[0];
-            this.channels[channel][ch].fadeout(release);
+            this.channels[channel][ch].stop();
         }
 
         if delay > 0 {
@@ -193,7 +191,7 @@ new class Synth {
         for frequency in this.playing.keys() {
             if frequency[1] == channel {
                 for i in range(len(this.playing[frequency])) {
-                    new dynamic new_ = frequency[0] * (2 ** (BEND_OCTAVES * (amount / 8192))), vol, sound, ch;
+                    new dynamic new_ = frequency[0] * (2 ** (BEND_OCTAVES * (amount / 8192))), sound, ch;
                     
                     if this.mode in (Synth.EXPORT, Synth.RENDER) {
                         this.eventList.append([
@@ -212,12 +210,10 @@ new class Synth {
                             ).reshape((-1, 2)).astype(numpy.int16)
                         );
 
-                        vol = this.playing[frequency][i][3];
-                        ch  = this.channels[channel][this.playing[frequency][i][0]];
+                        ch = this.channels[channel][this.playing[frequency][i][0]];
 
                         ch.stop();
                         ch.play(sound, -1);
-                        ch.set_volume(*vol);
                     }
                 }
             }
@@ -329,7 +325,7 @@ new class Synth {
 
         IO.out("Mixing tracks...\n");
         
-        new dynamic maxLen    = max(len(x) for x in tracks);
+        new dynamic maxLen = max(len(x) for x in tracks);
         tracks[0].resize(maxLen);
         new dynamic fullTrack = tracks[0];
 
@@ -379,7 +375,7 @@ new class Synth {
 
 main {
     if len(argv) == 1 {
-        IO.out("SynthScript v2022.10.31 - thatsOven\n");
+        IO.out("SynthScript v2022.11.2 - thatsOven\n");
     } else {
         new bool compile = False;
 
