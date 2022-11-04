@@ -239,7 +239,7 @@ new class Synth {
         new dynamic tracks = [];
         for ch in range(CHANNELS) {
             for i = len(this.eventList) - 1; i >= 0; i-- {
-                if this.eventList[i][2] == ch {
+                if this.eventList[i][0] == Synth.EventType.NOTE and this.eventList[i][2] == ch {
                     tracks.append(
                         numpy.zeros(
                             ceil((this.eventList[i][6] + this.eventList[i][5]) * FREQUENCY_SAMPLE),
