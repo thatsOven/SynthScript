@@ -115,8 +115,8 @@ Statements are not case sensitive.
 - You can use SynthScript's Python API to do the same operation. The `note` method is composed like this:
 	```
 	synth.note(
-		frequency, channel, status, <instrument>,
-		<velocity>, <delay>, <volumes>, <release>
+		frequency, channel, status, 
+		<instrument>, <velocity>, <delay>
 	)
 	```
 	Arguments in angular brackets are optional.
@@ -187,6 +187,6 @@ Statements are not case sensitive.
 	```
 - You can use SynthScript's Python API to do the same operation. The `play` method is composed like this:
 	```
-	synth.play(playable, <times>, <blocking>, <volumes>)
+	synth.play(playable, <times>, <blocking>)
 	```
 	Arguments in angular brackets are optional.
