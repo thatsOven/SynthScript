@@ -373,9 +373,9 @@ new class Synth {
     }
 }
 
-main {
+main() {
     if len(argv) == 1 {
-        IO.out("SynthScript v2022.11.2 - thatsOven\n");
+        IO.out("SynthScript v2022.11.4 - thatsOven\n");
     } else {
         new bool compile = False;
 
