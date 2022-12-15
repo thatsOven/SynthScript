@@ -47,7 +47,7 @@ Available waveforms are:
 - `Noise(amplitude, static)`
 ## Effects
 ### Post processing effects
-- `Envelope(attack, decay, sustain, static)`
+- `Envelope(attack, decay, sustain, release, static)`
 	- `attack`: sets the time it takes for the signal to rise from an amplitude of 0 to full amplitude. Default is 0.
 	- `decay`: sets the time it takes for the signal to fall from full amplitude to the sustain level.
 	- `sustain`: sets the amplitude of the wave for the time the key is held.
