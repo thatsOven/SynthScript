@@ -27,6 +27,7 @@ $include os.path.join("HOME_DIR", "components", "effects.opal")
 $include os.path.join("HOME_DIR", "components", "waves.opal")
 $include os.path.join("HOME_DIR", "components", "Instrument.opal")
 $include os.path.join("HOME_DIR", "components", "Process.opal")
+$include os.path.join("HOME_DIR", "components", "Midi.opal")
 
 new class Synth {
     enum {
@@ -72,7 +73,9 @@ new class Synth {
     }
 
     new method play(playable, times = 1, blocking = True) {
-        if type(playable) is Sound {
+        new dynamic type_ = type(playable);
+
+        if type_ is Sound {
             if this.mode == Synth.REALTIME {
                 new dynamic ch = this.getFreeSoundChannel();
 
@@ -97,11 +100,24 @@ new class Synth {
                 this.__time += delay;
             }
         } else {
-            if blocking {
-                while times != 0 {
-                    playable(this);
+            if type_ is Midi {
+                new function __play() {
+                    external times;
 
-                    times--;
+                    while times != 0 {
+                        for event in playable.events {
+                            match event[0] {
+                                case "note" {
+                                    this.note(*(event[1:]));
+                                }
+                                case "pitch" {
+                                    this.pitchBend(*(event[1:]));
+                                }
+                            }
+                        }
+
+                        times--;
+                    }
                 }
             } else {
                 new function __play() {
@@ -113,10 +129,14 @@ new class Synth {
                         times--;
                     }
                 }
+            }
 
+            if blocking {
+                __play();
+            } else {
                 Thread(target = __play).start();
             }
-        }
+        } 
     }
 
     new method __addTime(time) {
@@ -152,7 +172,6 @@ new class Synth {
 
                 if delay != 0 and len(this.eventList) != 0 {
                     this.__addTime(delay);
-                    this.eventList[-1][5] += delay;
                 }
             }
 
@@ -375,7 +394,7 @@ new class Synth {
 
 main() {
     if len(argv) == 1 {
-        IO.out("SynthScript v2022.11.4 - thatsOven\n");
+        IO.out("SynthScript v2023.1.7 - thatsOven\n");
     } else {
         new bool compile = False;
 
