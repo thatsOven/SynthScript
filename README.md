@@ -31,6 +31,14 @@ Process(**effects, static)
 ```
 - `**effects`: a list of keyword arguments used to refer to other `Process` objects or effects.
 - `static`
+## `Midi`
+A `Midi` is a way to include and play midi files.
+### Arguments
+```
+Midi(file, instruments)
+```
+- `file`: the midi file.
+- `instruments`: a list of instruments mapped to midi channels. If not set, square waves will be used for all channels.
 ## Waveforms
 Waveforms all take two basic arguments when generated:
 ```
