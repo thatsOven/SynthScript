@@ -38,7 +38,7 @@ A `Midi` is a way to include and play midi files.
 Midi(file, instruments)
 ```
 - `file`: the midi file.
-- `instruments`: a list of instruments mapped to midi channels. If not set, square waves will be used for all channels.
+- `instruments`: a list of instruments mapped to midi channels. If not set, square waves will be used for every channel.
 ## Waveforms
 Waveforms all take two basic arguments when generated:
 ```
@@ -183,7 +183,7 @@ Statements are not case sensitive.
 	END
 	```
 ### `PLAY <object>`
-- Plays a defined section or pygame `Sound` object.
+- Plays a defined section, a `Midi`, or a pygame `Sound` object.
 - Optionally, a `WITH` clause can be added to pass arguments to the `play` method:
 	- `times`: amount of times the object will be played. Default is 1.
 	- `blocking`: sets whether the method should wait until the end of the playback (True) or not (False). Default is True.
