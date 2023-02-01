@@ -1,4 +1,6 @@
 new class Instrument {
+    new dynamic ID = 0;
+
     new method __init__(**waves) {
         if "postProcess" in waves {
             this.postProcess = waves["postProcess"];
@@ -26,6 +28,9 @@ new class Instrument {
                 this.waves[key].static = static; 
             }
         }
+
+        this._id = Instrument.ID;
+        Instrument.ID++;
     }
 
     new method _noStatic() {

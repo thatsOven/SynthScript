@@ -20,6 +20,7 @@ new int CHANNELS           = 16,
 new float MAX_AMP              = 512,
           NOTE_DURATION        = 1,
           MAX_INSTRUMENT_VALUE = 512,
+          MIN_NOTE_DURATION    = 0.05,
           BEND_OCTAVES         = 1 / 6; 
 
 $include os.path.join("HOME_DIR",   "compiler", "Compiler.opal")
@@ -243,6 +244,24 @@ new class Synth {
         }
     }
 
+    new method __lookforEnv(process) {
+        if type(process) is Process {
+            for key in process.effects {
+                if type(process.effects[key]) is Envelope {
+                    return process.effects[key];
+                } elif type(process.effects[key]) is Process {
+                    new dynamic val = this.__lookforEnv(process.effects[key]);
+
+                    if val {
+                        return val;
+                    }
+                }
+            }
+        } elif type(process) is Envelope {
+            return process;
+        }
+    }
+
     new method render(source) {
         global FREQUENCY_SAMPLE;
         
@@ -288,10 +307,46 @@ new class Synth {
             tracks.append(numpy.zeros(0, dtype = numpy.int16));
         }
 
+        new dynamic cached = [None for _ in range(Instrument.ID + 1)];
+
         IO.out("Generating waves...\n");
         for event in this.eventList {
             if event[0] == Synth.EventType.NOTE {
-                Synth.SAMPLE = 2 * numpy.pi * numpy.arange(0, event[5], 1 / FREQUENCY_SAMPLE);
+                new dynamic t = event[5];
+
+                if cached[event[4]._id] is None {
+                    if event[4].postProcess is not None {
+                        new dynamic tmp = this.__lookforEnv(event[4].postProcess);
+
+                        if tmp is not None {
+                            new dynamic sTime = (tmp.attack + tmp.decay) / 1000;
+
+                            if t < sTime {
+                                t = sTime;
+                            }
+
+                            t += tmp.release / 1000;
+
+                            cached[event[4]._id] = (sTime, tmp.release / 1000);
+                        } else {
+                            cached[event[4]._id] = 0;
+                        }
+                    }
+                } elif cached[event[4]._id] != 0 {
+                    new dynamic tmp = cached[event[4]._id];
+
+                    if t < tmp[0] {
+                        t = tmp[0];
+                    }
+
+                    t += tmp[1];
+                }
+
+                if t < MIN_NOTE_DURATION {
+                    t = MIN_NOTE_DURATION;
+                }
+
+                Synth.SAMPLE = 2 * numpy.pi * numpy.arange(0, t, 1 / FREQUENCY_SAMPLE);
 
                 new dynamic length = int(event[6] * FREQUENCY_SAMPLE),
                             cLen   = len(tracks[event[2]]) - length - len(Synth.SAMPLE);
