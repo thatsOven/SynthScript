@@ -47,6 +47,6 @@ new class Midi {
     }
 
     new classmethod getFreq(note) {
-        return int(440 * 2 ** ((note - 69) / 12));
+        return 440.0 * 2 ** ((note - 69) / 12);
     }
 }

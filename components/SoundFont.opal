@@ -26,7 +26,7 @@ new class SoundFont {
 
 new class _FakeMPNote {
     new method __init__(frequency) {
-        this.degree = ceil((12 * log2(frequency / 440)) + 69); 
+        this.degree = int(12 * numpy.log2(frequency / 455) + 69); 
     }
 }
 

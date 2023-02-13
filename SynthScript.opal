@@ -2,7 +2,7 @@ package opal:         import *;
 package os:           import mkdir, path, getcwd;
 package sys:          import argv;
 package copy:         import deepcopy;
-package math:         import ceil, log2;
+package math:         import ceil;
 package scipy:        import signal;
 package time:         import sleep;
 package pygame:       import sndarray, mixer;
@@ -163,6 +163,10 @@ new class Synth {
                 this.eventList[freq][5] += time;
             }
         }
+    }
+
+    new classmethod getFreq(note) {
+        return 440.0 * 2 ** ((note - 69) / 12);
     }
 
     new method note(frequency, channel, status, instrument = None, velocity = MAX_AMP, delay = 0) {

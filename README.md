@@ -39,6 +39,24 @@ Midi(file, instruments)
 ```
 - `file`: the midi file.
 - `instruments`: a list of instruments mapped to midi channels. If not set, square waves will be used for every channel.
+## `SoundFont`
+A `SoundFont` is a way to include and use `.sf2` files.
+### Arguments
+```
+SoundFont(file)
+```
+- `file`: the `.sf2` file.
+This class contains a `getInstrument` method that will find an instrument given its name.
+## `SoundFontInstrument`
+A `SoundFontInstrument` lets you use a specific instrument from a `SoundFont`
+### Arguments
+```
+SoundFontInstrument(soundFont, preset, bank)
+```
+- `soundFont`: the `SoundFont` you want to get the instruments from.
+- `preset` and `bank` let you pick a specific instrument. Both arguments are optional.
+
+It's not recommended to mix `SoundFontInstrument`s and waveforms in the same track when using midi files due to approximation errors.
 ## Waveforms
 Waveforms all take two basic arguments when generated:
 ```
