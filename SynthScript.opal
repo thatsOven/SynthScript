@@ -1,14 +1,16 @@
 package opal:         import *;
-package os:           import mkdir, path;
+package os:           import mkdir, path, getcwd;
 package sys:          import argv;
-package math:         import ceil;
+package copy:         import deepcopy;
+package math:         import ceil, log2;
 package scipy:        import signal;
 package time:         import sleep;
 package pygame:       import sndarray, mixer;
+package pathlib:      import Path;
 package scipy.io:     import wavfile;
 package threading:    import Thread;
 package pygame.mixer: import Sound;
-import numpy;
+import numpy, builtins;
 use exec as exec;
 
 new int CHANNELS           = 16,
@@ -29,6 +31,21 @@ $include os.path.join("HOME_DIR", "components", "waves.opal")
 $include os.path.join("HOME_DIR", "components", "Instrument.opal")
 $include os.path.join("HOME_DIR", "components", "Process.opal")
 $include os.path.join("HOME_DIR", "components", "Midi.opal")
+$include os.path.join("HOME_DIR", "components", "SoundFont.opal")
+
+new str SCRIPT_DIR = getcwd();
+
+new dynamic defaultIsInstance = builtins.isinstance;
+
+new function _customIsinstance(instance, cls) {
+    if type(instance) is _FakeMPNote {
+        return True;
+    }
+
+    return defaultIsInstance(instance, cls);
+}
+
+builtins.isinstance = _customIsinstance;
 
 new class Synth {
     enum {
@@ -193,7 +210,7 @@ new class Synth {
             ch.play(
                 sndarray.make_sound(
                     (
-                        velocity * instrument.get(frequency)
+                        instrument.get(frequency, velocity)
                     ).reshape((-1, 2)).astype(numpy.int16)
                 ), -1
             );
@@ -226,7 +243,7 @@ new class Synth {
                     } else {
                         sound = sndarray.make_sound(
                             (
-                                this.playing[frequency][i][1] * this.playing[frequency][i][2].get(new_)
+                                this.playing[frequency][i][2].get(new_, this.playing[frequency][i][1])
                             ).reshape((-1, 2)).astype(numpy.int16)
                         );
 
@@ -360,7 +377,7 @@ new class Synth {
                 tracks[event[2]] += numpy.resize(
                     numpy.concatenate((
                         numpy.zeros(length, dtype = numpy.int16),
-                        (event[3] * event[4].get(event[1])).astype(numpy.int16),
+                        event[4].get(event[1], event[3]).astype(numpy.int16),
                         numpy.zeros(cLen, dtype = numpy.int16)
                     )), len(tracks[event[2]])
                 );
@@ -435,21 +452,29 @@ new class Synth {
                 exec(source);
             }
             case Synth.RENDER {
-                mixer.init(RENDER_FREQ_SAMPLE, channels = 1);
-
                 this.soundChannels = [mixer.Channel(0)];
 
                 new dynamic soundtrack = this.render(source);
                 this.mode = Synth.REALTIME;
+
+                mixer.quit();
+                mixer.init(RENDER_FREQ_SAMPLE, channels = 1);
+
                 this.play(sndarray.make_sound(soundtrack));
             }
         }
     }
 }
 
+new function getScriptDir(file) {
+    return str(Path(file).parent.absolute());
+}
+
 main() {
+    global SCRIPT_DIR;
+
     if len(argv) == 1 {
-        IO.out("SynthScript v2023.1.7 - thatsOven\n");
+        IO.out("SynthScript v2023.2.13 - thatsOven\n");
     } else {
         new bool compile = False;
 
@@ -474,6 +499,8 @@ main() {
             IO.out("No file name given.\n");
             quit;
         }
+
+        SCRIPT_DIR = getScriptDir(argv[1]);
 
         new dynamic source;
         with open(argv[1], "r") as script {

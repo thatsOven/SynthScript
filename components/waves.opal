@@ -33,10 +33,10 @@ new class Square : Wave {
         this.__wave = __wave;
     }
 
-    new method get(frequency) {
+    new method get(frequency, velocity) {
         super().get();
 
-        return this.__amp * this.__wave(frequency);
+        return velocity * this.__amp * this.__wave(frequency);
     }
 }
 
@@ -51,10 +51,10 @@ new class Sawtooth : Wave {
         this.__amp = this.amplitude / MAX_INSTRUMENT_VALUE;
     }
 
-    new method get(frequency) {
+    new method get(frequency, velocity) {
         super().get();
 
-        return this.__amp * signal.sawtooth(Synth.SAMPLE * frequency, this.width);
+        return velocity * this.__amp * signal.sawtooth(Synth.SAMPLE * frequency, this.width);
     }
 }
 
@@ -63,9 +63,9 @@ new class Noise : Wave {
         this.__wave = (this.amplitude / MAX_INSTRUMENT_VALUE) * numpy.random.uniform(-1, 1, len(Synth.SAMPLE));
     }
 
-    new method get(frequency) {
+    new method get(frequency, velocity) {
         super().get();
 
-        return this.__wave;
+        return velocity * this.__wave;
     }
 }

@@ -47,14 +47,14 @@ new class Instrument {
         }
     }
 
-    new method get(frequency) {
+    new method get(frequency, velocity) {
         if this.preProcess is not None {
             frequency = this.preProcess.get(frequency);
         }
 
-        new dynamic wave = this.waves[this.__keys[0]].get(frequency);
+        new dynamic wave = this.waves[this.__keys[0]].get(frequency, velocity);
         for i = 1; i < len(this.__keys); i++ {
-            wave += this.waves[this.__keys[i]].get(frequency);
+            wave += this.waves[this.__keys[i]].get(frequency, velocity);
         }
 
         if this.postProcess is not None {
