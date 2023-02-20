@@ -1,7 +1,6 @@
 package opal:         import *;
 package os:           import mkdir, path, getcwd;
 package sys:          import argv;
-package copy:         import deepcopy;
 package math:         import ceil;
 package scipy:        import signal;
 package time:         import sleep;
@@ -400,7 +399,7 @@ new class Synth {
         }
 
         if this.mode == Synth.EXPORT {
-            IO.out("Writing files...\n");;
+            IO.out("Writing files...\n");
             if not path.exists("tracks") {
                 mkdir("tracks");
             }
