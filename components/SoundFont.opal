@@ -9,8 +9,21 @@ new class SoundFont {
         }
     }
 
+    new method _allInstruments() {
+        new dynamic tmp   = this.soundFont.all_instruments(),
+                    instr = [];
+
+        for topKey in tmp {
+            for key in tmp[topKey] {
+                instr.append(tmp[topKey][key]);
+            }
+        }
+
+        return instr;
+    }
+
     new method getInstrument(name) {
-        new dynamic instruments = this.soundFont.get_all_instrument_names();
+        new dynamic instruments = this._allInstruments();
 
         for item in instruments {
             if name.lower() in item.lower() {
