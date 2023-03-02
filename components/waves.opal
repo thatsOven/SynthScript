@@ -18,19 +18,29 @@ new class Square : Wave {
 
         if this.duty is None {
             new function __wave(frequency) {
-                return signal.square(Synth.SAMPLE * frequency);
+                return signal.square(frequency);
             }
         } elif type(this.duty) in (int, float) {
             new function __wave(frequency) {
-                return signal.square(Synth.SAMPLE * frequency, this.duty);
+                return signal.square(frequency, this.duty);
             }
         } else {
             new function __wave(frequency) {
-                return signal.square(Synth.SAMPLE * frequency, this.duty.get(frequency));
+                return signal.square(frequency, this.duty.get(frequency));
             }
         }
 
-        this.__wave = __wave;
+        if usingCupy {            
+            new function __newWave(frequency) {
+                return numpy.asarray(__wave((frequency * Synth.SAMPLE).get()));
+            }
+        } else {
+            new function __newWave(frequency) {
+                return __wave(frequency * Synth.SAMPLE);
+            }
+        }
+
+        this.__wave = __newWave;
     }
 
     new method get(frequency, velocity) {
@@ -49,12 +59,24 @@ new class Sawtooth : Wave {
 
     new method _compute() {
         this.__amp = this.amplitude / MAX_INSTRUMENT_VALUE;
+
+        if usingCupy {
+            new function __wave(frequency, width) {
+                return numpy.array(signal.sawtooth((Synth.SAMPLE * frequency).get(), this.width));
+            }
+        } else {
+            new function __wave(frequency, width) {
+                return signal.sawtooth(Synth.SAMPLE * frequency, this.width);
+            }
+        }
+
+        this.__wave = __wave;
     }
 
     new method get(frequency, velocity) {
         super().get();
 
-        return velocity * this.__amp * signal.sawtooth(Synth.SAMPLE * frequency, this.width);
+        return velocity * this.__amp * this.__wave(frequency, this.width);
     }
 }
 
