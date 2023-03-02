@@ -2,14 +2,14 @@ package opal:         import *;
 package os:           import mkdir, path, getcwd;
 package sys:          import argv;
 package math:         import ceil;
+package time:         import sleep, time;
 package scipy:        import signal;
-package time:         import sleep;
 package pygame:       import sndarray, mixer;
 package pathlib:      import Path;
 package scipy.io:     import wavfile;
 package threading:    import Thread;
 package pygame.mixer: import Sound;
-import numpy, builtins;
+import builtins;
 use exec as exec;
 
 new int CHANNELS           = 16,
@@ -23,6 +23,19 @@ new float MAX_AMP              = 512,
           MAX_INSTRUMENT_VALUE = 512,
           MIN_NOTE_DURATION    = 0.05,
           BEND_OCTAVES         = 1 / 6; 
+
+main {
+    new bool usingCupy;
+
+    if "--cupy" in argv {
+        argv.remove("--cupy");
+        import cupy as numpy;
+        usingCupy = True;
+    } else {
+        import numpy;
+        usingCupy = False;
+    }
+}
 
 $include os.path.join("HOME_DIR",   "compiler", "Compiler.opal")
 $include os.path.join("HOME_DIR", "components", "effects.opal")
@@ -164,10 +177,6 @@ new class Synth {
         }
     }
 
-    new classmethod getFreq(note) {
-        return 440.0 * 2 ** ((note - 69) / 12);
-    }
-
     new method note(frequency, channel, status, instrument = None, velocity = MAX_AMP, delay = 0) {
         new dynamic pair = (frequency, channel), ch;
 
@@ -209,14 +218,14 @@ new class Synth {
                 this.playing[pair] = [(ch, velocity, instrument)];
             }
 
+            new dynamic wave = (instrument.get(frequency, velocity)).reshape((-1, 2)).astype(numpy.int16);
+
+            if usingCupy {
+                wave = wave.get();
+            }
+
             ch = this.channels[channel][ch];
-            ch.play(
-                sndarray.make_sound(
-                    (
-                        instrument.get(frequency, velocity)
-                    ).reshape((-1, 2)).astype(numpy.int16)
-                ), -1
-            );
+            ch.play(sndarray.make_sound(wave), -1);
         } else {
             ch = this.playing[pair].pop()[0];
             this.channels[channel][ch].stop();
@@ -244,11 +253,15 @@ new class Synth {
                         this.__addTime(delay);
                         this.__time += delay;
                     } else {
-                        sound = sndarray.make_sound(
-                            (
-                                this.playing[frequency][i][2].get(new_, this.playing[frequency][i][1])
-                            ).reshape((-1, 2)).astype(numpy.int16)
-                        );
+                        new dynamic wave = (
+                            this.playing[frequency][i][2].get(new_, this.playing[frequency][i][1])
+                        ).reshape((-1, 2)).astype(numpy.int16);
+
+                        if usingCupy {
+                            wave = wave.get();
+                        }
+                        
+                        sound = sndarray.make_sound(wave);
 
                         ch = this.channels[channel][this.playing[frequency][i][0]];
 
@@ -287,49 +300,55 @@ new class Synth {
         
         FREQUENCY_SAMPLE = RENDER_FREQ_SAMPLE;
 
-        IO.out("Converting source to event list...\n");
+        IO.out("Converting source to event list... ");
+        new dynamic mTime = time();
         this.eventList = [];
 
         new dynamic synth = this;
         exec(source);
 
-        IO.out("Generating base arrays...\n");
-        new dynamic tracks = [];
+        IO.out(f"Done in {round(time() - mTime, 4)} s.\nGenerating base arrays... ");
+        mTime = time();
+
+        new dynamic tracks = [],
+                    maxLen = 0;
         for ch in range(CHANNELS) {
             for i = len(this.eventList) - 1; i >= 0; i-- {
                 if this.eventList[i][0] == Synth.EventType.NOTE and this.eventList[i][2] == ch {
-                    tracks.append(
-                        numpy.zeros(
-                            ceil((this.eventList[i][6] + this.eventList[i][5]) * FREQUENCY_SAMPLE),
-                            dtype = numpy.int16
-                        )
-                    );
+                    new dynamic len_ = ceil((this.eventList[i][6] + this.eventList[i][5]) * FREQUENCY_SAMPLE);
+
+                    if len_ > maxLen {
+                        maxLen = len_;
+                    }
 
                     break;
                 }
-            } else {
-                tracks.append(numpy.zeros(0, dtype = numpy.int16));
             }
         }
 
         for i = len(this.eventList) - 1; i >= 0; i-- {
             if this.eventList[i][0] == Synth.EventType.PLAYBACK {
-                tracks.append(
-                    numpy.zeros(
-                        ceil((this.eventList[i][2] + this.eventList[i][3]) * FREQUENCY_SAMPLE),
-                        dtype = numpy.int16
-                    )
-                );
+                len_ = ceil((this.eventList[i][2] + this.eventList[i][3]) * FREQUENCY_SAMPLE);
+
+                if len_ > maxLen {
+                    maxLen = len_;
+                }
 
                 break;
             }
-        } else {
-            tracks.append(numpy.zeros(0, dtype = numpy.int16));
+        }
+
+        unchecked: repeat CHANNELS {
+            tracks.append(
+                numpy.zeros(maxLen, dtype = numpy.int16)
+            );
         }
 
         new dynamic cached = [None for _ in range(Instrument.ID + 1)];
 
-        IO.out("Generating waves...\n");
+        IO.out(f"Done in {round(time() - mTime, 4)} s.\nGenerating waves... ");
+        mTime = time();
+
         for event in this.eventList {
             if event[0] == Synth.EventType.NOTE {
                 new dynamic t = event[5];
@@ -369,7 +388,7 @@ new class Synth {
                 Synth.SAMPLE = 2 * numpy.pi * numpy.arange(0, t, 1 / FREQUENCY_SAMPLE);
 
                 new dynamic length = int(event[6] * FREQUENCY_SAMPLE),
-                            cLen   = len(tracks[event[2]]) - length - len(Synth.SAMPLE);
+                            cLen   = maxLen - length - len(Synth.SAMPLE);
 
                 if cLen < 0 {
                     cLen = 0;
@@ -382,7 +401,7 @@ new class Synth {
                         numpy.zeros(length, dtype = numpy.int16),
                         event[4].get(event[1], event[3]).astype(numpy.int16),
                         numpy.zeros(cLen, dtype = numpy.int16)
-                    )), len(tracks[event[2]])
+                    )), maxLen
                 );
             } else {
                 new dynamic length = int(event[3] * FREQUENCY_SAMPLE),
@@ -393,40 +412,51 @@ new class Synth {
                         numpy.zeros(length, dtype = numpy.int16),
                         event[1].astype(numpy.int16),
                         numpy.zeros(cLen, dtype = numpy.int16)
-                    )), len(tracks[-1])
+                    )), maxLen
                 );
             }
         }
 
         if this.mode == Synth.EXPORT {
-            IO.out("Writing files...\n");
+            IO.out(f"Done in {round(time() - mTime, 4)} s.\nWriting files... ");
+            mTime = time();
+
             if not path.exists("tracks") {
                 mkdir("tracks");
             }
 
             for i in range(len(tracks) - 1) {
                 if len(tracks[i]) != 0 {
+                    if usingCupy {
+                        tracks[i] = tracks[i].get();
+                    }
+
                     wavfile.write(path.join("tracks", str(i) + ".wav"), FREQUENCY_SAMPLE, tracks[i]);
                 }
             }
 
             if len(tracks[-1]) != 0 {
+                if usingCupy {
+                    tracks[-1] = tracks[-1].get();
+                }
+                    
                 wavfile.write(path.join("tracks", "playbackTrack.wav"), FREQUENCY_SAMPLE, tracks[-1]);
             }
 
+            IO.out(f"Done in {round(time() - mTime, 4)} s.\n");
             return;
         }
 
-        IO.out("Mixing tracks...\n");
+        IO.out(f"Done in {round(time() - mTime, 4)} s.\nMixing tracks... ");
+        mTime = time();
         
-        new dynamic maxLen = max(len(x) for x in tracks);
-        tracks[0].resize(maxLen);
         new dynamic fullTrack = tracks[0];
 
         for i = 1; i < len(tracks); i++ {
-            tracks[i].resize(maxLen);
             fullTrack += tracks[i];
         }
+
+        IO.out(f"Done in {round(time() - mTime, 4)} s.\n");
 
         return fullTrack;
     }
@@ -451,6 +481,10 @@ new class Synth {
                     mixer.Channel(NOTES_PER_CHANNEL * CHANNELS + i) for i in range(SOUND_CHANNELS)
                 ];
 
+                mixer.quit();
+                mixer.init(FREQUENCY_SAMPLE);
+                mixer.set_num_channels(NOTES_PER_CHANNEL * CHANNELS + SOUND_CHANNELS);
+
                 new dynamic synth = this;
                 exec(source);
             }
@@ -462,6 +496,10 @@ new class Synth {
 
                 mixer.quit();
                 mixer.init(RENDER_FREQ_SAMPLE, channels = 1);
+
+                if usingCupy {
+                    soundtrack = soundtrack.get();
+                }
 
                 this.play(sndarray.make_sound(soundtrack));
             }
@@ -477,7 +515,7 @@ main() {
     global SCRIPT_DIR;
 
     if len(argv) == 1 {
-        IO.out("SynthScript v2023.2.13 - thatsOven\n");
+        IO.out("SynthScript v2023.3.2 - thatsOven\n");
     } else {
         new bool compile = False;
 

@@ -12,6 +12,9 @@ To run, open or compile `SynthScript.opal`, and pass it a file to run as a comma
 - `--realtime`
 	- Skips the rendering process and plays the source code directly. This option will produce a lower quality sound and more inaccuracies in playback.
 	- **Usage**: --realtime
+- `--cupy`
+	- Uses the GPU to perform NumPy operations. Results in a significant performance improvement. Requires the `cupy` module installed.
+	- **Usage**: --cupy
 # Synthetizer tools
 ## `Instrument`
 An `Instrument` is a way to combine waveforms and `Process`es.
