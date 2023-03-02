@@ -17,26 +17,36 @@ new class Square : Wave {
         this.__amp = (this.amplitude / MAX_INSTRUMENT_VALUE);
 
         if this.duty is None {
-            new function __wave(frequency) {
-                return signal.square(frequency);
+            new function __wave(baseWave, f) {
+                return signal.square(baseWave);
             }
         } elif type(this.duty) in (int, float) {
-            new function __wave(frequency) {
-                return signal.square(frequency, this.duty);
+            new function __wave(baseWave, f) {
+                return signal.square(baseWave, this.duty);
             }
         } else {
-            new function __wave(frequency) {
-                return signal.square(frequency, this.duty.get(frequency));
+            if usingCupy {
+                new function __duty(f) {
+                    return this.duty.get(f, 1).get();
+                }
+            } else {
+                new function __duty(f) {
+                    return this.duty.get(f, 1);
+                }
+            }
+
+            new function __wave(baseWave, f) {
+                return signal.square(baseWave, __duty(f));
             }
         }
 
         if usingCupy {            
             new function __newWave(frequency) {
-                return numpy.asarray(__wave((frequency * Synth.SAMPLE).get()));
+                return numpy.asarray(__wave((frequency * Synth.SAMPLE).get(), frequency));
             }
         } else {
             new function __newWave(frequency) {
-                return __wave(frequency * Synth.SAMPLE);
+                return __wave(frequency * Synth.SAMPLE, frequency);
             }
         }
 
