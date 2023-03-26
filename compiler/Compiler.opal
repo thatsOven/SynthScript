@@ -90,7 +90,7 @@ new class Compiler {
         "b" : 11
     };
 
-    $include os.path.join("HOME_DIR", "compiler", "handlersMethods.opal")
+    $include os.path.join(HOME_DIR, "compiler", "handlersMethods.opal")
 
     new method __init__(source) {
         this.output = "";
@@ -104,7 +104,7 @@ new class Compiler {
             this.__error(e);
         }
 
-        $include os.path.join("HOME_DIR", "compiler", "statementHandlers.opal")
+        $include os.path.join(HOME_DIR, "compiler", "statementHandlers.opal")
     }
 
     new method __error(msg) {

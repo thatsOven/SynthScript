@@ -37,13 +37,13 @@ main {
     }
 }
 
-$include os.path.join("HOME_DIR",   "compiler", "Compiler.opal")
-$include os.path.join("HOME_DIR", "components", "effects.opal")
-$include os.path.join("HOME_DIR", "components", "waves.opal")
-$include os.path.join("HOME_DIR", "components", "Instrument.opal")
-$include os.path.join("HOME_DIR", "components", "Process.opal")
-$include os.path.join("HOME_DIR", "components", "Midi.opal")
-$include os.path.join("HOME_DIR", "components", "SoundFont.opal")
+$include os.path.join(HOME_DIR,   "compiler", "Compiler.opal")
+$include os.path.join(HOME_DIR, "components", "effects.opal")
+$include os.path.join(HOME_DIR, "components", "waves.opal")
+$include os.path.join(HOME_DIR, "components", "Instrument.opal")
+$include os.path.join(HOME_DIR, "components", "Process.opal")
+$include os.path.join(HOME_DIR, "components", "Midi.opal")
+$include os.path.join(HOME_DIR, "components", "SoundFont.opal")
 
 new str SCRIPT_DIR = getcwd();
 
