@@ -11,6 +11,7 @@ package threading:    import Thread;
 package pygame.mixer: import Sound;
 import builtins;
 use exec as exec;
+$args ["--nostatic"]
 
 new int CHANNELS           = 16,
         NOTES_PER_CHANNEL  = 16,
