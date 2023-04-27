@@ -10,7 +10,7 @@ package scipy.io:     import wavfile;
 package threading:    import Thread;
 package pygame.mixer: import Sound;
 import builtins;
-use exec as exec;
+use exec;
 $args ["--nostatic"]
 
 new int CHANNELS           = 16,
