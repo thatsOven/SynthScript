@@ -469,7 +469,7 @@ new class Synth {
                 return;
             }
             case Synth.REALTIME {
-                mixer.init(FREQUENCY_SAMPLE);
+                mixer.init(FREQUENCY_SAMPLE, allowedchanges = 0);
                 mixer.set_num_channels(NOTES_PER_CHANNEL * CHANNELS + SOUND_CHANNELS);
 
                 this.channels = [
@@ -482,8 +482,6 @@ new class Synth {
                     mixer.Channel(NOTES_PER_CHANNEL * CHANNELS + i) for i in range(SOUND_CHANNELS)
                 ];
 
-                mixer.quit();
-                mixer.init(FREQUENCY_SAMPLE);
                 mixer.set_num_channels(NOTES_PER_CHANNEL * CHANNELS + SOUND_CHANNELS);
 
                 new dynamic synth = this;
@@ -496,7 +494,7 @@ new class Synth {
                 this.mode = Synth.REALTIME;
 
                 mixer.quit();
-                mixer.init(RENDER_FREQ_SAMPLE, channels = 1);
+                mixer.init(RENDER_FREQ_SAMPLE, channels = 1, allowedchanges = 0);
 
                 if usingCupy {
                     soundtrack = soundtrack.get();
