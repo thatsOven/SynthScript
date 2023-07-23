@@ -469,6 +469,7 @@ new class Synth {
                 return;
             }
             case Synth.REALTIME {
+                mixer.quit();
                 mixer.init(FREQUENCY_SAMPLE, allowedchanges = 0);
                 mixer.set_num_channels(NOTES_PER_CHANNEL * CHANNELS + SOUND_CHANNELS);
 
@@ -481,8 +482,6 @@ new class Synth {
                 this.soundChannels = [
                     mixer.Channel(NOTES_PER_CHANNEL * CHANNELS + i) for i in range(SOUND_CHANNELS)
                 ];
-
-                mixer.set_num_channels(NOTES_PER_CHANNEL * CHANNELS + SOUND_CHANNELS);
 
                 new dynamic synth = this;
                 exec(source);
