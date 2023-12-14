@@ -1,6 +1,6 @@
 package opal:         import *;
 package os:           import mkdir, path, getcwd;
-package sys:          import argv;
+package sys:          import argv, exit;
 package math:         import ceil;
 package time:         import sleep, time;
 package scipy:        import signal;
@@ -513,7 +513,7 @@ main() {
     global SCRIPT_DIR;
 
     if len(argv) == 1 {
-        IO.out("SynthScript v2023.3.2 - thatsOven\n");
+        IO.out("SynthScript v2023.12.15 - thatsOven\n");
     } else {
         new bool compile = False;
 
@@ -536,7 +536,7 @@ main() {
 
         if len(argv) == 1 {
             IO.out("No file name given.\n");
-            quit;
+            exit(1);
         }
 
         SCRIPT_DIR = getScriptDir(argv[1]);
